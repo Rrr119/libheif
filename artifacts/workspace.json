@@ -1,0 +1,17 @@
+{
+  "root": "/home/dev/feedback/uid21957",
+  "B": "/home/dev/feedback/uid21957",
+  "sha": "12a259a5882dd99d45ec5fc77e296a3b620d1e2e",
+  "wslDistro": "Ubuntu-26.04",
+  "source": {
+    "owner": "strukturag",
+    "repo": "libheif",
+    "sha": "12a259a5882dd99d45ec5fc77e296a3b620d1e2e"
+  },
+  "fork": {
+    "owner": "Rrr119",
+    "repo": "libheif",
+    "cloneUrl": "https://github.com/Rrr119/libheif.git"
+  },
+  "at": "2026-11-15T22:38:30.167Z"
+}

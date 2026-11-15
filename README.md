@@ -274,11 +274,62 @@ If you want to compile SVT-AV1 yourself,
 * Run the `svt.cmd` script in the `third-party` directory to download SVT-AV1
   and compile it.
 
-You have to enable SVT-AV1 with CMake.
+You have to enable SVT-AV1 with CMake: `-DWITH_SvtEnc=ON`.
 
 When running `cmake`, make sure that the environment variable
 `PKG_CONFIG_PATH` includes the absolute path to `third-party/SVT-AV1/Build/linux/install/lib/pkgconfig`.
 You may have to replace `linux` in this path with your system's identifier.
+
+#### Using the SVT-AV1 encoder
+
+Once compiled in, select the `svt` encoder instead of the default `aom` encoder, e.g. with `heif-enc`:
+
+```
+heif-enc -A -e svt -q 50 -p speed=8 -o output.avif input.jpg
+```
+
+or through the API by querying the encoder descriptor with id `"svt"` via
+`heif_context_get_encoder_descriptors()` and passing it to `heif_context_get_encoder()`.
+The most important encoder parameters are:
+
+* `quality` (0-100, default 50) — lossy quality, mapped to the SVT-AV1 CRF/QP scale.
+  Note that the same `quality` value targets a different bitrate than with the `aom` encoder;
+  compare encoders at matched output quality (e.g. PSNR), not at matched `quality` numbers.
+* `speed` (0-13, default 12) — SVT-AV1 speed preset. Lower is slower but compresses better.
+  Presets 4-8 are a good choice for photo albums; 12 is suited for real-time-ish use.
+* `threads` (default 4) — increase this on multi-core machines, the default is conservative.
+* `qp`, `min-q`, `max-q`, `tune` (`vq`, `psnr`, `ssim`), `tile-rows`, `tile-cols` — see `heif-enc -A -e svt -P`.
+
+Files written by the SVT-AV1 encoder are standard AVIF and can be decoded by any AV1 decoder
+(dav1d, libaom, ...). Decoding is unaffected by which encoder produced the file.
+
+#### Performance: SVT-AV1 vs libaom
+
+Measured with libheif v1.23.7, libaom 3.13.1, SVT-AV1 2.3.0, encoding a 1920x1080 image
+on a 16-core x86-64 machine, 16 encoder threads, best of 3 runs
+(reproduce with `bench/sweep.py`):
+
+| encoder | speed preset | quality | time    | size     | PSNR-Y  |
+|---------|--------------|---------|---------|----------|---------|
+| aom     | 2            | 70      | 4.88 s  | 401.0 KB | 38.64 dB |
+| aom     | 4            | 70      | 1.37 s  | 411.9 KB | 38.30 dB |
+| aom     | 6            | 70      | 0.14 s  | 376.0 KB | 37.65 dB |
+| svt     | 4            | 70      | 1.32 s  | 384.7 KB | 39.63 dB |
+| svt     | 6            | 70      | 0.87 s  | 383.5 KB | 39.57 dB |
+| svt     | 8            | 70      | 0.82 s  | 536.5 KB | 41.75 dB |
+| svt     | 12           | 70      | 0.49 s  | 807.2 KB | 44.99 dB |
+| aom     | 2            | 50      | 2.75 s  |  45.8 KB | 33.05 dB |
+| aom     | 4            | 50      | 0.55 s  |  50.4 KB | 33.06 dB |
+| aom     | 6            | 50      | 0.10 s  |  96.0 KB | 33.59 dB |
+| svt     | 4            | 50      | 1.22 s  |  24.0 KB | 32.88 dB |
+| svt     | 6            | 50      | 0.83 s  |  24.7 KB | 32.87 dB |
+| svt     | 8            | 50      | 0.78 s  | 148.0 KB | 34.81 dB |
+| svt     | 12           | 50      | 0.49 s  | 349.3 KB | 38.53 dB |
+
+At matched output quality, SVT-AV1 at presets 4-6 is about 3-6x faster than libaom at the
+slow speed presets (2-4) that are typically used for still photos, at equal or better
+compression (e.g. quality 70: `svt` speed 6 encodes in 0.87 s what `aom` speed 2 needs
+4.88 s for, with slightly smaller size and higher PSNR).
 
 ## Codec plugins
 
